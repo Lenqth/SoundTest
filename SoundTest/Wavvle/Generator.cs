@@ -10,6 +10,7 @@ using System.Windows.Forms;
 
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using SoundTester;
 
 namespace dxgtest {
 	public partial class Generator : Form {
@@ -17,100 +18,156 @@ namespace dxgtest {
 			InitializeComponent();
 		}
 
-		Graph painter; 
+		Graph painter;
+		Synth synth;
+
 		private void pictureBox1_Paint(object sender, PaintEventArgs e) {
 			painter.InitDraw();
             painter.Clear();
 			int prev_pos = graph_pos;
-			//graph_pos += timer1.Interval / 10; 
-			graph_pos =  (int)(player.GetPosition() / 441 / 2);
-			Console.Error.WriteLine(graph_pos);
+			//graph_pos += timer1.Interval / 10; 4
+			graph_pos =  (int)(synth.player.GetPosition() / 441 / 2);
 			for (int i = prev_pos; i <= graph_pos ; i++) {
-				freq_graph[i % FREQ_BUFF_SIZE] = freq_buff[i % FREQ_BUFF_SIZE];
+				freq_graph[i % Synth.FREQ_BUFF_SIZE] = synth.freq_buff[i % Synth.FREQ_BUFF_SIZE];
             }
-			painter.Curve(freq_graph , sample_interval:0.01f );
+			painter.Curve(freq_graph , sample_interval:0.04f );
+
+			float cur_x = (0.04f * graph_pos - painter.offset_x) * painter.scale_x;
+            painter.g.DrawLine(Pens.BlueViolet, new PointF(cur_x, 0), new PointF(cur_x, painter.g.ClipBounds.Bottom));
+
+			;
 			painter.EndDraw(e.Graphics);
 	}
 
 		private void Generator_Load(object sender, EventArgs e) {
 			painter = new Graph(pictureBox1.Size.Width, pictureBox1.Size.Height);
-			this.Init();
-			this.Play();
+			synth = new Synth();
+			synth.Play(Frequency,Waveform);
+        }
+		
+		float[] freq_graph = new float[Synth.FREQ_BUFF_SIZE];
+		int graph_pos = 0;
+
+		bool sndkey1 = false;
+		bool sndkey2 = false;
+		bool sndkey3 = false;
+
+		int sn_pitch = 64;
+		int sn_pitch2 = 0;
+		float snd1freq = Graph.pitch2freq(64);
+		float snd2freq = Graph.pitch2freq(70);
+		float snd3freq = Graph.pitch2freq(71);
+
+		bool vib_switch = true;
+		bool vibflg = false;
+
+		/*config*/
+
+		float vibFreq = 5.0f;
+		float vibWidth = 30.0f;
+
+
+		float shkDur = 0.2f;
+		float shkWidth = 100.0f;
+
+		double shkTime = 0.0;
+
+		double prev_t = 9e99;
+		protected double Frequency(double t) {
+			double delta = 0.0;
+			if (prev_t < t) {
+				delta = t - prev_t;
+			}
+			prev_t = t;
+			double basefreq = snd1freq;
+			basefreq -= shkTime / shkDur * shkWidth;
+			shkTime = Math.Max(shkTime-delta,0);
+
+			if (vibflg) {
+				basefreq += (vibWidth * Math.Sin(t * vibFreq * 2 * Math.PI));
+			}
+			return basefreq;
         }
 
-		const int FREQ_BUFF_SIZE = 100000;
-		float[] freq_buff = new float[FREQ_BUFF_SIZE];
-		float[] freq_graph = new float[FREQ_BUFF_SIZE];
-		int buff_pos = 0;
-		int graph_pos = 0;
-		BufferedWaveProvider wp;
-		WaveOut player;
 
-		protected void Init() {
-			wp = new BufferedWaveProvider(new WaveFormat(44100, 16, 1));
-			var mmDevice = new MMDeviceEnumerator()
-				.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-			player = new WaveOut(); //  new WasapiOut(mmDevice, AudioClientShareMode.Shared, false, 200);
-
-		}
-		public void Play() {
-			Task t = test_sin(delegate (float x) {
-					return (float)(330.0f + 40f * Math.Sin(x * 8 * Math.PI));
-			});
-			player.Init(wp);
-			player.Play();
-			
+		static double Pow2(double x, double y) {
+			return Math.Sign(x) * Math.Pow(Math.Abs(x), y);
 		}
 
-		public void Stop() {
-			player.Stop();
-		}
-		static float PHASE_PER_SAMPLE = (float)(2 * Math.PI / 44100.0);
-		static float PHASE_LARGE = (float)(100 * 2 * Math.PI);
-		async Task test_sin(Func<float, float> freq) {
-			int WAVE_BYTES = (int)(44100 * 5) * 2;
-			int bufsize = 20000;
-			float phase = 0;
-			byte[] data = new byte[WAVE_BYTES];
-			int t = 0;
-			while (true) {
-				for (int i = 0; i < WAVE_BYTES; i += 2) {
-					float fq = freq( (t++) / 44100.0f);
-                    phase += fq * PHASE_PER_SAMPLE;
+		//protected double Waveform(double phase) {
+		//	return Pow2(Math.Sin(phase), 0.2);
+		//}
 
-					if ((t % 441) == 440) {
-						freq_buff[buff_pos] = fq;
-						buff_pos++;
-						if (buff_pos >= freq_buff.Length) buff_pos = 0;
-					}
 
-					if (phase > PHASE_LARGE) phase -= PHASE_LARGE;
-
-					ushort val = (ushort)(Math.Sin(phase) * (1 << 14) + (1 << 14));
-					data[i] = (byte)(val & 0xff);
-					data[i + 1] = (byte)(val >> 8);
-				}
-				//Console.WriteLine(phase);
-				//Console.WriteLine(wp.BufferLength);
-				//Console.WriteLine(wp.BufferedBytes);
-				//Console.WriteLine(DateTime.Now);
-				int pos = 0;
-				for (pos = 0; pos + bufsize < data.Length; pos += bufsize) {
-					wp.AddSamples(data, pos, bufsize);
-					while (wp.BufferedBytes + bufsize > wp.BufferLength) {
-						await Task.Delay(100);
-					}
-				}
-				wp.AddSamples(data, pos, data.Length - pos);
-			}
+		protected double Waveform(double phase) {
+			return Math.Sin(phase) * 0.4 + Math.Sin(phase * 2.0) * 0.3 + Math.Sin(phase * 3.0) * 0.2 + Math.Sin(phase * 4.0) * 0.1 ;
 		}
 
 		private void Generator_FormClosed(object sender, FormClosedEventArgs e) {
-			this.Stop();
+			synth.Stop();
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
 			this.pictureBox1.Refresh();
 		}
+
+		private void Generator_KeyDown(object sender, KeyEventArgs e) {
+			switch (e.KeyCode) {
+				case Keys.Z:
+					sndkey1 = true;
+					synth.Volume = 1.0f;
+					break;
+				case Keys.X:
+					sndkey2 = true;
+					break;
+				case Keys.C:
+					sndkey3 = true;
+					break;
+				case Keys.A:
+					if (sndkey1) break;
+					synth.wp.ClearBuffer();
+					shkTime = shkDur;
+					sndkey1 = true;
+					synth.Volume = 1.0f;
+					break;
+				case Keys.ShiftKey:
+					vibflg = true;
+					break;
+
+			}
+		}
+
+		private void Generator_KeyUp(object sender, KeyEventArgs e) {
+			switch (e.KeyCode) {
+				case Keys.Z:
+					sndkey1 = false;
+					synth.Volume = 0.0f;
+					break;
+				case Keys.X:
+                    sndkey2 = false;
+					break;
+				case Keys.C:
+					sndkey3 = false;
+					break;
+				case Keys.A:
+					shkTime = 0.0;
+					sndkey1 = false;
+					synth.Volume = 0.0f;
+					break;
+				case Keys.Up:
+					sn_pitch += 1;
+					snd1freq = Graph.pitch2freq( sn_pitch + sn_pitch2 / 8.0f);
+					break;
+				case Keys.Down:
+					sn_pitch -= 1;
+					snd1freq = Graph.pitch2freq(sn_pitch + sn_pitch2 / 8.0f);
+					break;
+				case Keys.ShiftKey:
+					vibflg = false;
+					break;
+			}
+		}
+
+
 	}
 }

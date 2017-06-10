@@ -13,6 +13,7 @@ using System.Windows.Forms;
 
 namespace dxgtest {
 	public partial class SpecAna : Form {
+		public static Font FONT = new Font(FontFamily.GenericMonospace, 8);
 		public SpecAna() {
 			InitializeComponent();
 		}
@@ -20,16 +21,19 @@ namespace dxgtest {
 		WaveIn wi = null;
 		float[] recorded;
 		float[] spectrum;
+		float[] test_graph;
 
 		const int FREQ_GRAPH_SIZE = 400;
+		float CUTOFF = 120.0f;
+		float THRESHOLD = 0.001f;
 		float[] freq_graph = new float[FREQ_GRAPH_SIZE];
 		int freq_graph_pos = 0;
-		float THRESHOLD = 0.001f;
 
 		List<Complex32> _buffer = new List<Complex32>();
+		List<KeyValuePair<int, float>> peaks = new List<KeyValuePair<int, float>>();
 
-		static int SAMPLE_RATE = 8000;
-		static int BUFFER_SIZE = 2000;
+		static int SAMPLE_RATE = 48000;
+		static int BUFFER_SIZE = 4800 * 2;
 		float UNIT_TIME = 1.0f;
 
 		public void Init() {
@@ -55,25 +59,43 @@ namespace dxgtest {
 				_buffer.RemoveRange(0, _buffer.Count - BUFFER_SIZE);
 			}
 			UNIT_TIME = (_buffer.Count * 1.0f / SAMPLE_RATE);
-			var fourier_v = _buffer.ToArray();
-			Fourier.Forward(fourier_v);
+			int _buffer_len = _buffer.Count;
+            var windowfunc = Window.Hann(_buffer_len);
+
+			float ScaleFactor = 1.0f;
+
+            var fourier_v = new Complex32[_buffer_len];
+			for (int i = 0; i < _buffer_len; i++) {
+				fourier_v[i] = new Complex32(  ScaleFactor *  _buffer[i].Real * (float)windowfunc[i] , 0);
+            }
+
+			Fourier.Forward(fourier_v);	
 			spectrum = fourier_v.Take(fourier_v.Length / 2).Select(x => (float)x.Norm()).ToArray();
-			List<KeyValuePair<float, float>> peaks = new List<KeyValuePair<float, float>>();
+			/*
+			Complex32[] cepstrum = fourier_v.Take(fourier_v.Length / 2).Select(x => Complex32.Log(x) ).ToArray();
+			Fourier.Inverse(cepstrum);
+			for (int i = 120; i < cepstrum.Length; i++) {
+				cepstrum[i] = 0;
+			}
+			Fourier.Forward(cepstrum);
+			test_graph = cepstrum.Take(cepstrum.Length / 2).Select(x => (float) x.Norm() ).ToArray(); //cepstrum.Select(x => (float)x.Norm()).ToArray();
+			*/
 			float prev = -1.0f;
 			bool prev_up = true;
 			float max_fq = 0.0f;
 			float max_v = 0.0f;
 
-			for (int i = 0; i < spectrum.Length; i++) {
+			peaks.Clear();
+            for (int i = 0; i < spectrum.Length; i++) {
 				float v = spectrum[i];
 				float fq = i / UNIT_TIME;
-				if (fq < 95.0) continue;
+				if (fq < CUTOFF) continue;
 				bool up = false;
 				if (v > prev) {
 					up = true;
 				}
-				if ( (!up) && prev_up) {
-					peaks.Add(new KeyValuePair<float, float>(fq, v));
+				if ( (!up) && prev_up && prev > THRESHOLD ) {
+					peaks.Add(new KeyValuePair<int, float>(i-1, prev));
 				}
 				if (max_v < v) {
 					max_fq = fq;
@@ -82,20 +104,27 @@ namespace dxgtest {
 				prev = v;
 				prev_up = up;
 			}
-			Console.WriteLine(String.Format("{0,12:F4},{1,12:F4}", max_fq, max_v));
-			if (max_v > THRESHOLD) {
+			float freq = float.NaN;
+			if (peaks.Count > 0) freq = peaks.Select( x=> x.Key).Min() / UNIT_TIME;
+            freq_graph[freq_graph_pos++] = freq;
+
+			//Console.WriteLine(String.Format("{0,12:F4},{1,12:F4}", max_fq, max_v));
+/*			if (max_v > THRESHOLD) {
 				freq_graph[freq_graph_pos++] = max_fq;
 			} else {
 				freq_graph[freq_graph_pos++] = float.NaN;
-			}
+			} */ 
+
+
+
 			if (freq_graph_pos >= FREQ_GRAPH_SIZE) freq_graph_pos = 0;
         }
 		public void _DataAvailable(object sender , WaveInEventArgs e) {
 			var buff = e.Buffer;
-            Console.WriteLine(e.BytesRecorded);
+            //Console.WriteLine(e.BytesRecorded);
 			recorded = new float[(buff.Length / 2)];
 			int REC_LEN = recorded.Length;
-			int NUMCHUNKS = 1;
+			int NUMCHUNKS = 2;
 			int chunk_len = REC_LEN / NUMCHUNKS;
 			//			var fourier_v = new Complex32[(buff.Length / 2)];
 			/*
@@ -134,6 +163,10 @@ namespace dxgtest {
 			painter.Curve(freq_graph);
 			painter.EndDraw(e.Graphics);
 		}
+		private void CepsBox_Paint(object sender, PaintEventArgs e) {
+			
+
+		}
 
 		public void Curve_Spec(Graphics g, float[] yl) {
 			float prev_x = float.NaN;
@@ -141,21 +174,34 @@ namespace dxgtest {
 			float real_x, real_y;
 			if (UNIT_TIME == 0) return;
 			for (int i = 1; i < yl.Length; i++) {
-				//real_x = (float) i / yl.Length * g.ClipBounds.Width; 
+				//real_x = (float) i / yl.Length * g.ClipBounds.Width;
 				float fq = i / UNIT_TIME;
-				real_x =  (float) (( Math.Log(fq) / Math.Log(10))-1.0f) / 3.0f  * g.ClipBounds.Width ;
 
-				real_y = g.ClipBounds.Bottom - (yl[i] * g.ClipBounds.Height);
-				real_y = (float) - ( Math.Log10(yl[i]) / 5.0f * g.ClipBounds.Height);
+				real_x = (float)((Math.Log(fq) / Math.Log(10)) - 1.0f) / 3.0f * g.ClipBounds.Width;
 
-				if ((!float.IsNaN(prev_x)) && (!float.IsNaN(prev_y))) {
+				//real_y = g.ClipBounds.Bottom - (yl[i] * g.ClipBounds.Height);
+				real_y = (float)-(Math.Log10(yl[i]) / 5.0f * g.ClipBounds.Height);
+
+				if (float.IsInfinity(real_x) || float.IsInfinity(real_y)) {
+					prev_x = prev_y = float.NaN;
+					continue;
+				}
+				
+				if (peaks.Count > 0 && peaks[0].Key == i) {
+					peaks.RemoveAt(0);
+					g.FillPie(Brushes.Red, real_x - 4, real_y - 4, 8, 8, 0, 360);
+					g.DrawString( String.Format("{0,4:F0}", fq) ,FONT,Brushes.Red,new PointF(real_x - 12, real_y - 16));
+				}
+				
+				if ((!float.IsNaN(prev_x)) && (!float.IsNaN(prev_y)) &&
+					(!float.IsInfinity(prev_x)) && (!float.IsInfinity(prev_y)) ) {
 					g.DrawLine(Pens.White, new PointF(prev_x, prev_y), new PointF(real_x, real_y));
 				}
 				prev_x = real_x;
 				prev_y = real_y;
 			}
 		}
-	
+
 		private void SpecAna_FormClosed(object sender, FormClosedEventArgs e) {
 			End();
 		}
@@ -163,6 +209,7 @@ namespace dxgtest {
 		private void timer1_Tick(object sender, EventArgs e) {
 			SpectrumBox.Refresh();
 			PitchGraphBox.Refresh();
+			//CepsBox.Refresh();
 		}
 
 	}

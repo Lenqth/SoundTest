@@ -38,7 +38,7 @@
 			this.pictureBox1.Location = new System.Drawing.Point(12, 12);
 			this.pictureBox1.Margin = new System.Windows.Forms.Padding(12);
 			this.pictureBox1.Name = "pictureBox1";
-			this.pictureBox1.Size = new System.Drawing.Size(564, 304);
+			this.pictureBox1.Size = new System.Drawing.Size(760, 400);
 			this.pictureBox1.TabIndex = 0;
 			this.pictureBox1.TabStop = false;
 			this.pictureBox1.Paint += new System.Windows.Forms.PaintEventHandler(this.pictureBox1_Paint);
@@ -52,12 +52,14 @@
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(588, 376);
+			this.ClientSize = new System.Drawing.Size(784, 561);
 			this.Controls.Add(this.pictureBox1);
 			this.Name = "Generator";
 			this.Text = "ジェネレータ";
 			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Generator_FormClosed);
 			this.Load += new System.EventHandler(this.Generator_Load);
+			this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Generator_KeyDown);
+			this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.Generator_KeyUp);
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.ResumeLayout(false);
 

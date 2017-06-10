@@ -11,8 +11,9 @@ namespace dxgtest {
 	}
 	class Graph {
 
-		Image backgimg;
-		Graphics g;
+		public static Font FONT = new Font(FontFamily.GenericMonospace, 8);
+        Image backgimg;
+		public Graphics g;
 
 		public Graph(int width,int height){
 			this.backgimg = new Bitmap(width, height);
@@ -29,8 +30,6 @@ namespace dxgtest {
 		}
 
 
-		float offset_x = 0.0f;
-		int offset_y = 49;
 
 		/// <summary>
 		/// true :無印式
@@ -39,8 +38,10 @@ namespace dxgtest {
 		bool oldstyle = false;
 
 
-		static float scale_x = 15;
-		static float scale_y = 12;
+		public float scale_x = 15;
+		public float scale_y = 12;
+		public float offset_x = 0.0f;
+		public int offset_y = 49;
 
 		static public float freq2pitch(float freq) {
 			if (freq == 0) return float.NaN;
@@ -54,7 +55,7 @@ namespace dxgtest {
 		public void Bar(int level, float x = 0.0f, float len = 1.0f) {
 			
 		}
-		public void Curve(float[] freq, int index = 0, int length = -1 , float x_first = 0.0f ,float sample_interval = 0.1f ) {
+		public void Curve(float[] freq, int index = 0, int length = -1 , float sample_interval = 0.1f ) {
 			if (length == -1) length = freq.Length;
 			float prev_x = float.NaN;
 			float prev_y = float.NaN;
@@ -64,7 +65,7 @@ namespace dxgtest {
 				if (float.IsNaN(pitch)) {
 					real_x = real_y = float.NaN;
                 } else {
-					real_x = (x_first + sample_interval * i - this.offset_x) * scale_x;
+					real_x = (sample_interval * i - this.offset_x) * scale_x;
 					real_y = g.ClipBounds.Bottom - ( (pitch - this.offset_y) * scale_y) ;
 					if ((!float.IsNaN(prev_x)) && (!float.IsNaN(prev_y))) {
 						g.DrawLine(Pens.YellowGreen, new PointF(prev_x, prev_y), new PointF(real_x, real_y));
@@ -86,7 +87,7 @@ namespace dxgtest {
 					new PointF(0, g.ClipBounds.Bottom - ((i - this.offset_y) * scale_y)),
 					new PointF(g.ClipBounds.Right, g.ClipBounds.Bottom - ((i - this.offset_y) * scale_y))
                     );
-				g.DrawString(i.ToString(), new Font(FontFamily.GenericMonospace,8), Brushes.Red,
+				g.DrawString(i.ToString(), FONT , Brushes.Red,
 					new PointF(10 + (i % 4) * 5, g.ClipBounds.Bottom - ((i - this.offset_y) * scale_y)  ),centre_format) ;
 			}
 			/*			float[] testdata = new float[210];
