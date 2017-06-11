@@ -32,7 +32,7 @@ namespace dxgtest {
             }
 			painter.Curve(freq_graph , sample_interval:0.04f );
 
-			float cur_x = (0.04f * graph_pos - painter.offset_x) * painter.scale_x;
+			float cur_x = (0.04f * (graph_pos % Synth.FREQ_BUFF_SIZE) - painter.offset_x) * painter.scale_x;
             painter.g.DrawLine(Pens.BlueViolet, new PointF(cur_x, 0), new PointF(cur_x, painter.g.ClipBounds.Bottom));
 
 			;
@@ -42,6 +42,7 @@ namespace dxgtest {
 		private void Generator_Load(object sender, EventArgs e) {
 			painter = new Graph(pictureBox1.Size.Width, pictureBox1.Size.Height);
 			synth = new Synth();
+			synth.Volume = 0.0;
 			synth.Play(Frequency,Waveform);
         }
 		
@@ -64,7 +65,7 @@ namespace dxgtest {
 		/*config*/
 
 		float vibFreq = 5.0f;
-		float vibWidth = 30.0f;
+		float vibWidth = 10.0f;
 
 
 		float shkDur = 0.2f;
