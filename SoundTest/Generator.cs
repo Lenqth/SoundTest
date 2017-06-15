@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using SoundTester;
+using SoundTester.Synth;
 
 namespace dxgtest {
 	public partial class Generator : Form {
@@ -22,7 +23,7 @@ namespace dxgtest {
 		Synth synth;
 
 		private void pictureBox1_Paint(object sender, PaintEventArgs e) {
-			painter.InitDraw();
+			painter.InitDraw();	
             painter.Clear();
 			int prev_pos = graph_pos;
 			//graph_pos += timer1.Interval / 10; 4
@@ -43,7 +44,7 @@ namespace dxgtest {
 			painter = new Graph(pictureBox1.Size.Width, pictureBox1.Size.Height);
 			synth = new Synth();
 			synth.Volume = 0.0;
-			synth.Play(Frequency,Waveform);
+			synth.Play(Frequency,SawWave);
         }
 		
 		float[] freq_graph = new float[Synth.FREQ_BUFF_SIZE];
@@ -55,9 +56,9 @@ namespace dxgtest {
 
 		int sn_pitch = 64;
 		int sn_pitch2 = 0;
-		float snd1freq = Graph.pitch2freq(64);
-		float snd2freq = Graph.pitch2freq(70);
-		float snd3freq = Graph.pitch2freq(71);
+		float snd1freq = MusicUtils.pitch2freq(64);
+		float snd2freq = MusicUtils.pitch2freq(70);
+		float snd3freq = MusicUtils.pitch2freq(71);
 
 		bool vib_switch = true;
 		bool vibflg = false;
@@ -101,7 +102,12 @@ namespace dxgtest {
 
 
 		protected double Waveform(double phase) {
-			return Math.Sin(phase) * 0.4 + Math.Sin(phase * 2.0) * 0.3 + Math.Sin(phase * 3.0) * 0.2 + Math.Sin(phase * 4.0) * 0.1 ;
+			return Math.Sin(phase) * 1.0;
+            // return Math.Sin(phase) * 0.4 + Math.Sin(phase * 2.0) * 0.3 + Math.Sin(phase * 3.0) * 0.2 + Math.Sin(phase * 4.0) * 0.1 ;
+		}
+
+		protected double SawWave(double phase) {
+			return ((phase / (Math.PI * 2.0) ) % (1.0)) * 2.0 - 1.0;
 		}
 
 		private void Generator_FormClosed(object sender, FormClosedEventArgs e) {
@@ -157,11 +163,11 @@ namespace dxgtest {
 					break;
 				case Keys.Up:
 					sn_pitch += 1;
-					snd1freq = Graph.pitch2freq( sn_pitch + sn_pitch2 / 8.0f);
+					snd1freq = MusicUtils.pitch2freq( sn_pitch + sn_pitch2 / 8.0f);
 					break;
 				case Keys.Down:
 					sn_pitch -= 1;
-					snd1freq = Graph.pitch2freq(sn_pitch + sn_pitch2 / 8.0f);
+					snd1freq = MusicUtils.pitch2freq(sn_pitch + sn_pitch2 / 8.0f);
 					break;
 				case Keys.ShiftKey:
 					vibflg = false;

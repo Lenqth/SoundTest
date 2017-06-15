@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SoundTester;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -24,5 +25,10 @@ namespace dxgtest {
 			g2.Show();
 
 		}
+
+		private void button3_Click(object sender, EventArgs e) {
+			var g3 = new MidiPiano();
+			g3.Show();
+        }
 	}
 }

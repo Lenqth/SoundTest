@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
+using SoundTester;
 
 namespace dxgtest {
 	class Pitches {
@@ -43,14 +44,6 @@ namespace dxgtest {
 		public float offset_x = 0.0f;
 		public int offset_y = 49;
 
-		static public float freq2pitch(float freq) {
-			if (freq == 0) return float.NaN;
-			return (float)(Math.Log(freq,2.0) - Math.Log(440.0f, 2.0) ) * 12.0f + 69.0f;
-		}
-
-		static public float pitch2freq(float pitch) {
-			return 440.0f * (float) Math.Pow( 2.0f , (pitch-69.0f)/12.0f);
-		}
 
 		public void Bar(int level, float x = 0.0f, float len = 1.0f) {
 			
@@ -61,7 +54,7 @@ namespace dxgtest {
 			float prev_y = float.NaN;
 			float real_x,real_y;
             for (int i= index ; i < index + length; i++) {
-				float pitch = freq2pitch(freq[i]);
+				float pitch = MusicUtils.freq2pitch(freq[i]);
 				if (float.IsNaN(pitch)) {
 					real_x = real_y = float.NaN;
                 } else {
