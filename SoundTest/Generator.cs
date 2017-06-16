@@ -44,7 +44,7 @@ namespace dxgtest {
 			painter = new Graph(pictureBox1.Size.Width, pictureBox1.Size.Height);
 			synth = new Synth();
 			synth.Volume = 0.0;
-			synth.Play(Frequency,SawWave);
+			synth.Play(Frequency,Waveform);
         }
 		
 		float[] freq_graph = new float[Synth.FREQ_BUFF_SIZE];

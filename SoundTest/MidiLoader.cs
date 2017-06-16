@@ -15,7 +15,7 @@ namespace SoundTester {
 
 
 		public MidiLoader() {
-			seq = new Sequence("tester.mid");
+			seq = new Sequence("test.mid");
 			midi_out = new OutputDevice(0);
 			synth_out = new MultiSynth();
 			player = new Sequencer();

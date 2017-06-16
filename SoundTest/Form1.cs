@@ -23,7 +23,6 @@ namespace dxgtest {
 		private void button2_Click(object sender, EventArgs e) {
 			var g2 = new SpecAna();
 			g2.Show();
-
 		}
 
 		private void button3_Click(object sender, EventArgs e) {

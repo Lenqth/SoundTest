@@ -59,8 +59,9 @@ namespace dxgtest {
 					real_x = real_y = float.NaN;
                 } else {
 					real_x = (sample_interval * i - this.offset_x) * scale_x;
-					real_y = g.ClipBounds.Bottom - ( (pitch - this.offset_y) * scale_y) ;
-					if ((!float.IsNaN(prev_x)) && (!float.IsNaN(prev_y))) {
+					real_y = g.ClipBounds.Bottom - ( (pitch - this.offset_y) * scale_y);
+					if ((!float.IsNaN(real_y)) && (!float.IsNaN(prev_y)) &&
+						( 0<real_y ) && ( 0 < prev_y) ) {
 						g.DrawLine(Pens.YellowGreen, new PointF(prev_x, prev_y), new PointF(real_x, real_y));
 					}
 				}
